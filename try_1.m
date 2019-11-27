@@ -29,11 +29,7 @@ hy=1;
 
 epsilone=0.00001;
 
-<<<<<<< 4b7ac153599ed2555be0cbaad76fd8b6752704b3
-order=5;
-=======
 order=16;
->>>>>>> Final_projet_stage
  l1=((dx/hx)^2+(dy/hy)^2)^(order/2)+epsilone;
  l2=((1-dx/hx)^2+(dy/hy)^2)^(order/2)+epsilone;
  l3=((1-dx/hx)^2+(1-dy/hy)^2)^(order/2)+epsilone;

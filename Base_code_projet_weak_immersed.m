@@ -11,14 +11,6 @@ Y_domain=[0 1];
 % nb point 
 % number on grid N by N grid
 
-<<<<<<< 4b7ac153599ed2555be0cbaad76fd8b6752704b3
-initial_Raffienement=3
-nb_refinement=7
-
-nbpoint_immersed=100;
-radius=0.1;
-center=[0.3 0.5];
-=======
 initial_Raffienement=4
 initial_immersed_refinement=1
 nb_refinement=5
@@ -26,22 +18,16 @@ nbpoint_immersed=20000;
 radius=0.35;
 center=[0.5 0.5];
 X=[];
->>>>>>> Final_projet_stage
 for i=1:nbpoint_immersed
 
         X(i,1)=radius*cos((i-1)*2*pi/(nbpoint_immersed))+center(1);
         X(i,2)=radius*sin((i-1)*2*pi/(nbpoint_immersed))+center(2);
 end
-
+X2=[];
 for i=1:nbpoint_immersed
 
-<<<<<<< 4b7ac153599ed2555be0cbaad76fd8b6752704b3
-        X2(i,1)=radius*cos((i-1)*2*pi/(nbpoint_immersed))+center(1)+0.4;
-        X2(i,2)=radius*sin((i-1)*2*pi/(nbpoint_immersed))+center(2);
-=======
         X2(i,1)=1*radius*0.2*cos((i-1)*2*pi/(nbpoint_immersed))+center(1);
         X2(i,2)=1*radius*0.2*sin((i-1)*2*pi/(nbpoint_immersed))+center(2);
->>>>>>> Final_projet_stage
 end
 
 X=[X ;X2];
@@ -56,6 +42,11 @@ end
 convergence=[];
 % base grid definition
 mesh=cells_define(X_domain(1),X_domain(2),Y_domain(1),Y_domain(2),initial_Raffienement);
+% mesh=raffine_immersed(mesh,initial_immersed_refinement,3,X);
+% mesh=raffine_immersed(mesh,initial_immersed_refinement,1,X);
+mesh=update_neighbors_v(mesh);
+
+
 for j=1:nb_refinement
 
 disp('size of the problem')
@@ -71,12 +62,12 @@ n_dof_domain=length(mesh.points);
 parfor i=1:length(mesh.points)
     a_p=zeros(1,length(mesh.points));
     a_p(i)=1;
-    if mesh.points(i,1)==0 | mesh.points(i,1)==1 | mesh.points(i,2)==0 | mesh.points(i,2)==1% | mesh.points(i,:)==[0.5 0.5]
+    if mesh.points(i,1)==X_domain(1) | mesh.points(i,1)==X_domain(2) | mesh.points(i,2)==Y_domain(1) | mesh.points(i,2)==Y_domain(2) % | mesh.points(i,:)==[0.5 0.5]
         a_p=a_p;
     elseif mesh.hanging(i)==true
-        a_p=get_stancil_hanging(mesh,i,1);
+        a_p=get_stancil_hanging(mesh,i);
     else
-        a_p=-get_stancil_L(mesh,i,1);
+        a_p=-get_stancil_L_v2(mesh,i);
     end
     A_Sparse_index=[A_Sparse_index ;sparsematrix(a_p,i)];
 end
@@ -84,10 +75,10 @@ end
 
 cells_sum=eval_immersed_boundary_sum_in_cells(mesh,X);
 
-B_immersed=[]
-C_Sparse_index=[]
+B_immersed=[];
+C_Sparse_index=[];
 
-for i=1:length(cells_sum.boundary)
+parfor i=1:length(cells_sum.boundary)
     
     a_p=zeros(1,n_dof_domain);
     a_p=get_lagrange_multiplier_stancil_weak_sum(mesh,cells_sum.index(i),X,cells_sum);
@@ -96,11 +87,11 @@ for i=1:length(cells_sum.boundary)
     
 end
 
+if isempty(C_Sparse_index)
+else
 C_Sparse_index=[C_Sparse_index;C_Sparse_index(:,2) C_Sparse_index(:,1) C_Sparse_index(:,3)];
-
-
+end
 A_Sparse_index=[A_Sparse_index ;C_Sparse_index];
-
 A=sparse(A_Sparse_index(:,1),A_Sparse_index(:,2),A_Sparse_index(:,3));
 
 
@@ -108,7 +99,7 @@ A=sparse(A_Sparse_index(:,1),A_Sparse_index(:,2),A_Sparse_index(:,3));
 B=zeros(length(mesh.points),1);
 Reel=zeros(length(mesh.points),1);
 for i=1:length(mesh.points)
-    if mesh.points(i,1)==0 | mesh.points(i,1)==1 | mesh.points(i,2)==0 | mesh.points(i,2)==1
+    if mesh.points(i,1)==X_domain(1) | mesh.points(i,1)==X_domain(2) | mesh.points(i,2)==Y_domain(1) | mesh.points(i,2)==Y_domain(2)
         B(i)=0;
     elseif mesh.hanging(i)==true
         B(i)=0;
@@ -138,9 +129,6 @@ plot3(X(:,1),X(:,2),immersed_value,'.r','markersize',30);
 hold off
 mesh_order=max(mesh.order);
 mesh_size=1/(2^(mesh_order-1));
-<<<<<<< 4b7ac153599ed2555be0cbaad76fd8b6752704b3
-convergence=[convergence; 1/mesh_size max(Solution)-1 ];
-=======
 
 
 rout=0.35;
@@ -170,42 +158,55 @@ L_inf=max(abs(error))
 
 
 convergence=[convergence; 1/sqrt(length(error)) relative_error_L2 relative_error_L1 L_inf ];
->>>>>>> Final_projet_stage
 
 mesh_uniformity_index(j)=std(mesh.order(mesh.active==true));
 
 
 if(j<nb_refinement)
-mesh=raffine(mesh,Solution,0.3,0,cells_sum.index);
+mesh=raffine(mesh,Solution,1,0,cells_sum.index);
+end
+mesh=update_neighbors_v(mesh);
+
 end
 
 
+
+rout=0.35;
+rin=rout*0.2;
+
+Tin=1;
+Tout=0;
+%error estimation
+error=[]
+for i=1:length(mesh.points)
+    if norm(mesh.points(i,:)-center)>rout*0.2 & norm(mesh.points(i,:)-center)<rout
+        error=[error; Solution(i)-(Tout+log(norm(mesh.points(i,:)-center)/rout)/log(rin/rout)*(Tin-Tout))];
+
+    end
+    
 end
 
+norm(error,2)
 
 
 
+
+nb=100;
+R=linspace(rin,rout,nb);
+for i=1:nb
+    T_2(i)=Tout+log(R(i)/rout)/log(rin/rout)*(Tin-Tout);
+end
+
+    
 
 figure()
 hold on
 T=delaunay(mesh.points);
 trisurf(T,mesh.points(:,1),mesh.points(:,2),Solution);
 plot3(X(:,1),X(:,2),immersed_value,'.r','markersize',30);
+plot3(R+0.5,ones(nb,1)*0.5,T_2,'.','markersize',30)
 hold off
 
-<<<<<<< 4b7ac153599ed2555be0cbaad76fd8b6752704b3
-figure()
-convergence_order=zeros(length(convergence)-2,2);
-for i=1:length(convergence)-2
-convergence_order(i,2)=log((convergence(i,2)-convergence(i+1,2))/(convergence(i+1,2)-convergence(i+2,2)))/log(1.01);
-convergence_order(i,1)=convergence(i+1,1);
-end
-plot(convergence_order(:,1),convergence_order(:,2));
-
-figure()
-plot(convergence(:,2));
-
-=======
 % figure()
 % convergence_order=zeros(length(convergence)-2,3);
 % for i=1:length(convergence)-2
@@ -241,7 +242,6 @@ xlabel('ln(dx)');
 ylabel('ln(error)');
 
 hold off
->>>>>>> Final_projet_stage
  
     
     

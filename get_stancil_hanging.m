@@ -1,11 +1,9 @@
 % code by Lucka Barbeau
-function hanging_stancil=get_stancil_hanging(TR,k,square)
+function hanging_stancil=get_stancil_hanging(TR,k)
 %give laplacien stancil for the point k in triangulation TR
-if square==1
-neighbors=V_neighbors_square(TR,k);
-else
-neighbors=V_neighbors(TR,k);
-end 
+
+neighbors=TR.neighbors_v{k,1};
+
 hanging_stancil=zeros(1,length(TR.points));
 N=length(neighbors);
 
@@ -19,8 +17,7 @@ for i=1:N
         elseif dx_dy(2)~=0
     neighbors_egal_x(l)=neighbors(i);
     l=l+1;
-        end
-      
+        end      
 end
 
 
