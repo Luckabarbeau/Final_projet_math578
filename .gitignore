@@ -1,0 +1,6 @@
+# Ignore all results but keep the folder
+interresting results/*
+!interresting results/.gitkeep
+
+
+
